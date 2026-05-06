@@ -8,6 +8,14 @@ import os
 
 app = Flask(__name__)
 
+
+@app.route("/")
+def home():
+    return jsonify({
+        "status": "running",
+        "service": "Copilot BD API"
+    })
+    
 class CopilotClient:
     def __init__(self):
         self.session = requests.Session()
