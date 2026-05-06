@@ -27,7 +27,7 @@ class CopilotClient:
         url = "https://copilot.microsoft.com/c/api/start"
 
         payload = {
-            "timeZone": "Asia/Dhaka",
+            "timeZone": "Asia/Kolkata",
             "startNewConversation": True,
             "teenSupportEnabled": True,
             "correctPersonalizationSetting": True,
