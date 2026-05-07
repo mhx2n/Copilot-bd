@@ -79,7 +79,14 @@ class CopilotClient:
                 elif data.get("event") == "appendText":
                     if data.get("messageId") == result["message_id"]:
                         text = data.get("text", "")
-                        result["text"] += text
+                        
+                        if text:
+                            result["text"] += text
+
+        # enough response পেলেই close
+                        if len(result["text"]) > 120:
+							ws.close()
+							done_event.set()
 
                 elif data.get("event") == "done":
                     ws.close()
@@ -108,7 +115,9 @@ class CopilotClient:
         thread.daemon = True
         thread.start()
 
-        done_event.wait(timeout=60)
+        done_event.wait(timeout=15)
+
+		ws.close()
 
         text = result["text"].strip()
 
