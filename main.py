@@ -15,7 +15,8 @@ def home():
         "status": "running",
         "service": "Copilot BD API"
     })
-    
+
+
 class CopilotClient:
     def __init__(self):
         self.session = requests.Session()
@@ -27,7 +28,7 @@ class CopilotClient:
         url = "https://copilot.microsoft.com/c/api/start"
 
         payload = {
-            "timeZone": "Asia/Kolkata",
+            "timeZone": "Asia/Bangladesh",
             "startNewConversation": True,
             "teenSupportEnabled": True,
             "correctPersonalizationSetting": True,
@@ -42,15 +43,11 @@ class CopilotClient:
 
         r = self.session.post(url, json=payload, headers=headers, timeout=30)
         r.raise_for_status()
-
         self.conversation_id = r.json()["currentConversationId"]
 
     def ask(self, message: str):
         ws_url = f"wss://copilot.microsoft.com/c/api/chat?api-version=2&clientSessionId={self.client_id}"
-
-        cookies = "; ".join(
-            [f"{k}={v}" for k, v in self.session.cookies.get_dict().items()]
-        )
+        cookies = "; ".join([f"{k}={v}" for k, v in self.session.cookies.get_dict().items()])
 
         result = {
             "text": "",
@@ -77,16 +74,16 @@ class CopilotClient:
                     result["message_id"] = data["messageId"]
 
                 elif data.get("event") == "appendText":
-                            if data.get("messageId") == result["message_id"]:
-								text = data.get("text", "")
-                        
-                            if text:
-								result["text"] += text
+                    if data.get("messageId") == result["message_id"]:
+                        text = data.get("text", "")
 
-        # enough response পেলেই close
-                            if len(result["text"]) > 120:
-								ws.close()
-								done_event.set()
+                        if text:
+                            result["text"] += text
+
+                        # enough response পেলেই close
+                        if len(result["text"]) > 120:
+                            ws.close()
+                            done_event.set()
 
                 elif data.get("event") == "done":
                     ws.close()
@@ -112,14 +109,13 @@ class CopilotClient:
         )
 
         thread = threading.Thread(target=ws.run_forever)
-             thread.daemon = True
-             thread.start()
+        thread.daemon = True
+        thread.start()
 
-             done_event.wait(timeout=15)
+        done_event.wait(timeout=15)
+        ws.close()
 
-		     ws.close()
-
-             text = result["text"].strip()
+        text = result["text"].strip()
 
         if not text:
             raise Exception("Empty response")
