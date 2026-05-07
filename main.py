@@ -8,6 +8,8 @@ import os
 
 app = Flask(__name__)
 
+TIMEOUT_SECONDS = 20
+
 
 @app.route("/")
 def home():
@@ -28,7 +30,7 @@ class CopilotClient:
         url = "https://copilot.microsoft.com/c/api/start"
 
         payload = {
-            "timeZone": "Asia/Bangladesh",
+            "timeZone": "Asia/Dhaka",
             "startNewConversation": True,
             "teenSupportEnabled": True,
             "correctPersonalizationSetting": True,
@@ -36,7 +38,7 @@ class CopilotClient:
         }
 
         headers = {
-            "User-Agent": "Mozilla/5.0",
+            "User-Agent": "CopilotNative/30.0.440421003-prod (Android 11; Google; sdk_gphone_arm64)",
             "Content-Type": "application/json",
             "X-Search-UILang": "en-US"
         }
@@ -64,6 +66,25 @@ class CopilotClient:
             }))
 
         def on_open(ws):
+            options = {
+                "event": "setOptions",
+                "supportedCards": [
+                    "createCalendarEvent", "consentV2", "finance", "flashcard",
+                    "image", "local", "personalArtifacts", "quiz", "recipe",
+                    "safetyHelpline", "sports", "tapToReveal", "video", "navigation"
+                ],
+                "supportedActions": [],
+                "supportedFeatures": [
+                    "composer-prefill-conversation-action",
+                    "composer-send-conversation-action-v2",
+                    "short-conversation-action",
+                    "session-duration-nudge"
+                ]
+            }
+
+            # Copilot sometimes behaves better if this is sent twice
+            ws.send(json.dumps(options))
+            ws.send(json.dumps(options))
             send_message(ws)
 
         def on_message(ws, msg):
@@ -76,44 +97,51 @@ class CopilotClient:
                 elif data.get("event") == "appendText":
                     if data.get("messageId") == result["message_id"]:
                         text = data.get("text", "")
-
                         if text:
                             result["text"] += text
 
-                        # enough response পেলেই close
-                        #if len(result["text"]) > 120:
-                            #ws.close()
-                            #done_event.set()
-
                 elif data.get("event") == "done":
-                    ws.close()
                     done_event.set()
 
             except Exception:
                 pass
 
         def on_error(ws, err):
-            result["text"] = f"ERROR: {err}"
+            if not result["text"]:
+                result["text"] = f"ERROR: {err}"
+            done_event.set()
+
+        def on_close(ws, close_status_code, close_msg):
             done_event.set()
 
         ws = websocket.WebSocketApp(
             ws_url,
             header=[
                 f"Cookie: {cookies}",
-                "User-Agent: Mozilla/5.0",
+                "User-Agent: CopilotNative/30.0.440421003-prod (Android 11; Google; sdk_gphone_arm64)",
                 "X-Search-UILang: en-US"
             ],
             on_open=on_open,
             on_message=on_message,
-            on_error=on_error
+            on_error=on_error,
+            on_close=on_close
         )
 
-        thread = threading.Thread(target=ws.run_forever)
+        thread = threading.Thread(
+            target=lambda: ws.run_forever(
+                ping_interval=20,
+                ping_timeout=10
+            )
+        )
         thread.daemon = True
         thread.start()
 
-        done_event.wait(timeout=40)
-        ws.close()
+        done_event.wait(timeout=TIMEOUT_SECONDS)
+
+        try:
+            ws.close()
+        except Exception:
+            pass
 
         text = result["text"].strip()
 
@@ -145,11 +173,9 @@ def ask():
 
     try:
         answer = bot.ask(prompt)
-
         return jsonify({
             "response": answer
         })
-
     except Exception as e:
         return jsonify({
             "error": str(e)
