@@ -59,9 +59,29 @@ class CopilotClient:
         done_event = threading.Event()
 
         def send_message(ws):
-            ws.send(json.dumps({
+
+            quiz_prompt = f"""
+        Return ONLY valid JSON array.
+
+        Example:
+        [
+          {{
+            "question":"...",
+            "options":["A","B","C","D"],
+            "correctOptionIndex":0,
+            "explanation":"..."
+          }}
+        ]
+
+        {message}
+        """
+
+             ws.send(json.dumps({
                 "event": "send",
-                "content": [{"type": "text", "text": message}],
+                "content": [{
+                    "type": "text",
+                    "text": quiz_prompt
+                }],
                 "conversationId": self.conversation_id
             }))
 
