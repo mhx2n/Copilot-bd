@@ -182,9 +182,15 @@ def health():
     })
 
 
-@app.route("/api/ask")
+@app.route("/api/ask", methods=["GET", "POST"])
 def ask():
-    prompt = request.args.get("prompt", "").strip()
+
+    data = request.get_json(silent=True) or {}
+
+    prompt = (
+        data.get("prompt")
+        or request.args.get("prompt", "")
+    ).strip()
 
     if not prompt:
         return jsonify({
@@ -193,9 +199,11 @@ def ask():
 
     try:
         answer = bot.ask(prompt)
+
         return jsonify({
             "response": answer
         })
+
     except Exception as e:
         return jsonify({
             "error": str(e)
