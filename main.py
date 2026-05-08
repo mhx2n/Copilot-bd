@@ -76,7 +76,7 @@ class CopilotClient:
         {message}
         """
 
-             ws.send(json.dumps({
+            ws.send(json.dumps({
                 "event": "send",
                 "content": [{
                     "type": "text",
